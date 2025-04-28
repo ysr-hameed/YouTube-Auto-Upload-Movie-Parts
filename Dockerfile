@@ -1,18 +1,24 @@
-# Use a base Python image
-FROM python:3.8-slim
+# Start with a base image (e.g., Python image)
+FROM python:3.9-slim
 
 # Install ffmpeg
-RUN apt-get update && apt-get install -y ffmpeg
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set up your working directory
-WORKDIR /workspace
-
-# Install Python dependencies
-COPY requirements.txt .
+# Install necessary Python packages
+COPY requirements.txt /app/requirements.txt
+WORKDIR /app
 RUN pip install -r requirements.txt
 
-# Copy the rest of your app
-COPY . .
+# Copy your application code
+COPY . /app
 
-# Set the command to run your app
-CMD ["python", "app.py"
+# Set environment variables if needed
+ENV FLASK_APP=app.py
+
+# Expose the required port
+EXPOSE 8080
+
+# Run the application
+CMD ["python", "app.py"]

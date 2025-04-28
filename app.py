@@ -203,7 +203,6 @@ def upload_video():
 
     if start_time >= usable_duration:
         print(f"All parts of {movie_name} are already created.")
-        delete_movie(movie_name)
         reset_progress()
         return
 

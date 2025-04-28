@@ -112,6 +112,14 @@ def create_part(url, start_time, duration, output_file, part_number, movie_name)
     except ffmpeg.Error as e:
         print(f"FFmpeg Error: {e}")
 
+
+@app.route('/ffmpeg-version')
+def ffmpeg_version():
+    try:
+        version = subprocess.check_output(['ffmpeg', '-version'])
+        return version.decode('utf-8')
+    except Exception as e:
+        return f"Error: {str(e)}"
 # Upload video to YouTube
 def upload_to_youtube(file, title, description, tags, token_data):
     try:

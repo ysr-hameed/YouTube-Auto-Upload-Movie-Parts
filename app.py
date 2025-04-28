@@ -181,54 +181,63 @@ def get_video_duration(video_path):
         print(f"Error getting video duration: {e}")
         return 0.0
 
-@app.route('/upload', methods=['POST'])
+@app.route('/upload', methods=['POST', 'GET'])
 def upload_video():
-    movies = load_movies()
-    if not movies:
-        return jsonify({"error": "No movies found in movies.json"}), 400
-    
-    progress = load_progress()
-    start_time = progress["current_start"]
-    part_number = progress["part_number"]
-    durations = progress["durations"]
-    current_movie_name = progress["movie_name"]
+    # Handle GET request for generating and uploading the video part
+    if request.method == 'GET':
+        # Logic to handle video part generation
+        movies = load_movies()
+        if not movies:
+            return jsonify({"error": "No movies found in movies.json"}), 400
 
-    for movie in movies:
-        if movie["name"] == current_movie_name or current_movie_name == "":
-            video_url = movie["url"]
-            movie_name = movie["name"]
-            break
-    else:
-        return jsonify({"error": "No more movies left to upload."}), 400
+        progress = load_progress()
+        start_time = progress["current_start"]
+        part_number = progress["part_number"]
+        durations = progress["durations"]
+        current_movie_name = progress["movie_name"]
 
-    total_duration = get_video_duration(video_url)
-    usable_duration = total_duration - (SKIP_START + SKIP_END)
+        # Check and load the movie to process
+        for movie in movies:
+            if movie["name"] == current_movie_name or current_movie_name == "":
+                video_url = movie["url"]
+                movie_name = movie["name"]
+                break
+        else:
+            return jsonify({"error": "No more movies left to upload."}), 400
 
-    if start_time >= usable_duration:
-        return jsonify({"error": f"All parts of {movie_name} are already created."}), 400
+        total_duration = get_video_duration(video_url)
+        usable_duration = total_duration - (SKIP_START + SKIP_END)
 
-    relative_start = start_time - SKIP_START
-    part_time = random.randint(MIN_PART_DURATION, MAX_PART_DURATION)
-    remaining_time = usable_duration - relative_start
-    part_time = min(part_time, remaining_time)
+        if start_time >= usable_duration:
+            return jsonify({"error": f"All parts of {movie_name} are already created."}), 400
 
-    create_part(video_url, start_time, part_time, OUTPUT_FILE, part_number, movie_name)
-    start_time += part_time
-    part_number += 1
-    durations.append(part_time)
-    save_progress(start_time, part_number, durations, movie_name)
+        relative_start = start_time - SKIP_START
+        part_time = random.randint(MIN_PART_DURATION, MAX_PART_DURATION)
+        remaining_time = usable_duration - relative_start
+        part_time = min(part_time, remaining_time)
 
-    tokens = load_tokens()
+        create_part(video_url, start_time, part_time, OUTPUT_FILE, part_number, movie_name)
+        start_time += part_time
+        part_number += 1
+        durations.append(part_time)
+        save_progress(start_time, part_number, durations, movie_name)
 
-    for user, token_data in tokens.items():
-        print(f"Uploading video for user: {user}")
-        title = f"{movie_name} - Part {part_number-1} | Trending Now #Movie #Cinema #{movie_name.replace(' ', '')}"
-        description = f"Enjoy part {part_number-1} of {movie_name}! Watch the best scenes! #Movie #Cinema #{movie_name.replace(' ', '')}"
-        tags = ['movie', 'cinema', 'entertainment', 'bollywood', 'quotes', 'trending', 'viral']
-        upload_to_youtube(OUTPUT_FILE, title, description, tags, token_data)
+        # After generating the video part, upload to YouTube
+        tokens = load_tokens()
 
-    return jsonify({"message": "Part uploaded successfully. Run again for next part."})
+        for user, token_data in tokens.items():
+            print(f"Uploading video for user: {user}")
+            title = f"{movie_name} - Part {part_number-1} | Trending Now #Movie #Cinema #{movie_name.replace(' ', '')}"
+            description = f"Enjoy part {part_number-1} of {movie_name}! Watch the best scenes! #Movie #Cinema #{movie_name.replace(' ', '')}"
+            tags = ['movie', 'cinema', 'entertainment', 'bollywood', 'quotes', 'trending', 'viral']
+            upload_to_youtube(OUTPUT_FILE, title, description, tags, token_data)
 
+        return jsonify({"message": "Part uploaded successfully. Run again for next part."})
+
+    # Handle POST request if you want to upload video parts from client-side
+    elif request.method == 'POST':
+        # Your POST logic goes here (if necessary, for example handling file uploads)
+        return jsonify({"message": "This endpoint currently handles GET requests for uploading parts."}), 200
 if __name__ == "__main__":
     port = os.environ.get("PORT", 8080)  # Default to 8080 if PORT is not set
     app.run(host='0.0.0.0', port=port)

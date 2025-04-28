@@ -230,4 +230,5 @@ def upload_video():
     return jsonify({"message": "Part uploaded successfully. Run again for next part."})
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+    port = os.environ.get("PORT", 8080)  # Default to 8080 if PORT is not set
+    app.run(host='0.0.0.0', port=port)

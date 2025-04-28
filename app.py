@@ -2,12 +2,16 @@ import json
 import os
 import random
 import ffmpeg
+from flask import Flask, jsonify, request
 from datetime import datetime, timedelta
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
+
+# Initialize Flask App
+app = Flask(__name__)
 
 # Settings
 VIDEO_WIDTH = 1080
@@ -176,12 +180,12 @@ def get_video_duration(video_path):
     except Exception as e:
         print(f"Error getting video duration: {e}")
         return 0.0
-        
+
+@app.route('/upload', methods=['POST'])
 def upload_video():
     movies = load_movies()
     if not movies:
-        print("No movies found in movies.json")
-        return
+        return jsonify({"error": "No movies found in movies.json"}), 400
     
     progress = load_progress()
     start_time = progress["current_start"]
@@ -195,16 +199,13 @@ def upload_video():
             movie_name = movie["name"]
             break
     else:
-        print("No more movies left to upload.")
-        return
+        return jsonify({"error": "No more movies left to upload."}), 400
 
     total_duration = get_video_duration(video_url)
     usable_duration = total_duration - (SKIP_START + SKIP_END)
 
     if start_time >= usable_duration:
-        print(f"All parts of {movie_name} are already created.")
-        reset_progress()
-        return
+        return jsonify({"error": f"All parts of {movie_name} are already created."}), 400
 
     relative_start = start_time - SKIP_START
     part_time = random.randint(MIN_PART_DURATION, MAX_PART_DURATION)
@@ -226,7 +227,7 @@ def upload_video():
         tags = ['movie', 'cinema', 'entertainment', 'bollywood', 'quotes', 'trending', 'viral']
         upload_to_youtube(OUTPUT_FILE, title, description, tags, token_data)
 
-    print("Part uploaded successfully. Run again for next part.")
+    return jsonify({"message": "Part uploaded successfully. Run again for next part."})
 
 if __name__ == "__main__":
-    upload_video()
+    app.run(host='0.0.0.0', port=5000)
